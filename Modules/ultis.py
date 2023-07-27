@@ -152,6 +152,9 @@ class AppleRead(Dataset):
         with open(os.path.join(data_path, 'inference_modified_2106355.json'), 'r') as f:
             json_data = json.load(f)
 
+        # remove images with class 1
+        json_data = [x for x in json_data if x['class'] != 1]
+
         n = len(json_data)
         if(mode == 'train'):
             self.dataset = json_data[:int(n*0.8)]
@@ -188,7 +191,7 @@ class AppleRead(Dataset):
         # convert everything into a torch.Tensor
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
         # there is only one class
-        labels = torch.ones((num_objs,), dtype=torch.int64) * int(self.dataset[index]['class'])
+        labels = torch.ones((num_objs,), dtype=torch.int64) # all labels are 1
         image_id = torch.tensor([index])
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         # suppose all instances are not crowd

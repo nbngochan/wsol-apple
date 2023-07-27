@@ -6,7 +6,7 @@ task: detection
 architect_settings:
         name: wsol-test
         backbone:
-                name: fasterrcnn-s
+                name: ssd-s
                 is_full: false
                 is_pretrained: true
                 is_freeze: false
@@ -21,8 +21,8 @@ training_settings:
         loss: none
         metric: mAP
         ckpt_path: "./mode/test"
-        n_epoch: 10
-        n_batch: 8
+        n_epoch: 50
+        n_batch: 16
         num_workers: 0
         optimizer: adam
         lr_scheduler: step
