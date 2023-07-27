@@ -1,0 +1,10 @@
+lightning
+gradio
+neptune
+torchvision==0.14.1
+torchmetrics==0.11.4
+numpy
+pillow
+scipy
+opencv-python
+matplotlib
