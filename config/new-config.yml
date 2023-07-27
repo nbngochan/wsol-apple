@@ -1,0 +1,34 @@
+logger:
+        project: "kaori/AISeed" # replace with your own
+        api_key: YOUR API KEY # replace with your own
+        tags: None
+task: detection
+architect_settings:
+        name: classifier-test
+        backbone:
+                name: resnet-s
+                is_full: false
+                is_pretrained: true
+                is_freeze: false
+        n_cls: 10
+dataset_settings:
+        name: CIFAR10
+        path: data/
+        img_size: 224
+training_settings: 
+        gpu_ids: [0]
+        n_gpu: 1
+        loss: none
+        metric: maAP
+        ckpt_path: "./mode/test"
+        n_epoch: 5
+        n_batch: 64
+        num_workers: 0
+        optimizer: adam
+        lr_scheduler: step
+        early_stopping: false
+        lr: 0.0001
+        lr_step: 10
+        lr_decay: 0.8
+        momentum: 0.9
+        weight_decay: 0.005
