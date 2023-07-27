@@ -2,15 +2,13 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.utils import make_grid, draw_bounding_boxes, draw_segmentation_masks
 import torch.nn.functional as F
-
+from torch import nn
 from Detector import WrappingDetector
 from ultis import *
-
 from pytorch_lightning import LightningModule, Trainer, LightningDataModule
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
 from neptune.types import File
 from pytorch_lightning.callbacks import ModelCheckpoint
-import torchmetrics
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 
@@ -186,11 +184,12 @@ class DataModule(LightningDataModule):
         self.num_workers = training_settings['num_workers']
 
         self.data_class = {
-            "PennFudan": PennFudanDataset
+            "PennFudan": PennFudanDataset,
+            "Apple": AppleRead
         }
         self.class_list = None
         self.collate_fn = None
-        if(self.dataset == 'PennFudan'):
+        if(self.dataset in ["Apple", "PennFudan"]):
             self.collate_fn = collate_fn
 
         self.train_transform, self.val_transform = transform
@@ -366,3 +365,4 @@ if __name__ == "__main__":
     trainer.fit(model, data)
     # test
     trainer.test(model, data)
+    

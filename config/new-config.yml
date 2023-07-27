@@ -1,28 +1,28 @@
 logger:
-        project: "kaori/AISeed" # replace with your own
+        project: "kaori/Apple" # replace with your own
         api_key: YOUR API KEY # replace with your own
         tags: None
 task: detection
 architect_settings:
-        name: classifier-test
+        name: wsol-test
         backbone:
-                name: resnet-s
+                name: fasterrcnn-s
                 is_full: false
                 is_pretrained: true
                 is_freeze: false
-        n_cls: 10
+        n_cls: 2
 dataset_settings:
-        name: CIFAR10
-        path: data/
+        name: Apple
+        path: data\Apple
         img_size: 224
 training_settings: 
         gpu_ids: [0]
         n_gpu: 1
         loss: none
-        metric: maAP
+        metric: mAP
         ckpt_path: "./mode/test"
-        n_epoch: 5
-        n_batch: 64
+        n_epoch: 10
+        n_batch: 8
         num_workers: 0
         optimizer: adam
         lr_scheduler: step

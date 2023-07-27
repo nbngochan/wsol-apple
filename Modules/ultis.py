@@ -1,12 +1,12 @@
 from torch.utils.data import Dataset
 from torchvision import transforms
 import torch
-from torch import nn
 from torchvision.transforms._presets import ObjectDetection
 from functools import partial
 import random
 import numpy as np
 import os, glob
+import json
 import PIL.Image as Image
 
 
@@ -143,3 +143,66 @@ class PennFudanDataset(torch.utils.data.Dataset):
 
         return trans_img, target, transforms.ToTensor()(img)
        
+class AppleRead(Dataset):
+    def __init__(self, mode, data_path, imgsize=224, transform=None):
+        self.data_path = data_path
+        self.mode = mode
+        self.transform = transform
+        # read json file
+        with open(os.path.join(data_path, 'inference_modified_2106355.json'), 'r') as f:
+            json_data = json.load(f)
+
+        n = len(json_data)
+        if(mode == 'train'):
+            self.dataset = json_data[:int(n*0.8)]
+        elif(mode == 'val'):
+            self.dataset = json_data[int(n*0.8):]
+        elif(mode == 'test'):
+            self.dataset = json_data[int(n*0.8):]
+
+        if(self.transform is None):
+            self.transform = partial(ObjectDetection)()
+
+    def __len__(self):
+        return len(self.dataset)
+    
+    def __getitem__(self, index):
+
+        img_path = os.path.join(self.data_path, 'images', self.dataset[index]['name'])
+        img = Image.open(img_path).convert("RGB")
+
+        # process labels
+        temp_boxes = self.dataset[index]['crop_coordinates_ratio']
+        num_objs = len(temp_boxes)
+        boxes = []
+        # convert from [x_center, y_center, width, height] to [xmin, ymin, xmax, ymax]
+        # and convert from ratio to absolute value
+        for box in temp_boxes:
+            x_center, y_center, width, height = box
+            xmin = int((x_center - width/2) * img.size[0])
+            xmax = int((x_center + width/2) * img.size[0])
+            ymin = int((y_center - height/2) * img.size[1])
+            ymax = int((y_center + height/2) * img.size[1])
+            boxes.append([xmin, ymin, xmax, ymax])
+
+        # convert everything into a torch.Tensor
+        boxes = torch.as_tensor(boxes, dtype=torch.float32)
+        # there is only one class
+        labels = torch.ones((num_objs,), dtype=torch.int64) * int(self.dataset[index]['class'])
+        image_id = torch.tensor([index])
+        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+        # suppose all instances are not crowd
+        iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
+
+        target = {}
+        target["boxes"] = boxes
+        target["labels"] = labels
+        # target["masks"] = masks
+        target["image_id"] = image_id
+        target["area"] = area
+        target["iscrowd"] = iscrowd
+
+        trans_img = self.transform(img)
+
+        return trans_img, target, transforms.ToTensor()(img)
+
