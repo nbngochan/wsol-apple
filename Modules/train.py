@@ -364,5 +364,5 @@ if __name__ == "__main__":
     # train
     trainer.fit(model, data)
     # test
-    trainer.test(model, data)
+    # trainer.test(model, data)
     
