@@ -296,7 +296,7 @@ class Model(LightningModule):
             reconstructions = [draw_segmentation_masks(image, mask.squeeze(1), alpha=0.9) 
                                 for image, mask in zip(images, boolean_masks)]
         else:
-            boxes = [out['boxes'][out['scores'] > .8] for out in predictions]
+            boxes = [out['boxes'][out['scores'] > .6] for out in predictions]
             reconstructions = [draw_bounding_boxes(image, box, width=10, colors='red')
                                     for image, box in zip(images, boxes)]
         reconstructions = torch.stack([F.interpolate(img.unsqueeze(0), size=(128, 128))
