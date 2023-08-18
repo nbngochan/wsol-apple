@@ -45,6 +45,24 @@ def get_lr_scheduler_config(optimizer, settings):
             'frequency': 1,
         }
 
+
+class CustomMAP(MeanAveragePrecision):
+    '''
+    Customized MeanAveragePrecision for pytorch-lightning
+    '''
+    def __init__(self):
+        super().__init__()
+
+    def compute(self):
+        '''
+        Compute metric
+        Returns:
+            metric: metric value mAP
+        '''
+        metric = super().compute()
+      
+        return metric['map']
+
 def get_metric(metric_name, num_classes):
     '''
     set up metric for evaluation
@@ -56,7 +74,7 @@ def get_metric(metric_name, num_classes):
     if metric_name == 'acc':
         metric = Accuracy(num_classes=num_classes)
     elif metric_name == 'mAP':
-        metric = MeanAveragePrecision(num_classes=num_classes)
+        metric = CustomMAP()
     elif metric_name == 'dice':
         metric = Dice(num_classes=num_classes)
     else:
