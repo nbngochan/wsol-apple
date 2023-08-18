@@ -84,8 +84,7 @@ class ModelBase(LightningModule):
         self.log('metrics/epoch/val_loss', sum(loss) / len(loss))
         self.log(f"metrics/epoch/val_{self.metrics_name}", self.valid_metrics.compute())
         
-        outputs = self.step_outputs[0]
-        reconstructions = self.log_result(outputs)
+        reconstructions = self.log_result(self.step_outputs[0])
         self.logger.experiment["val/reconstructions"].append(File.as_image(reconstructions))
 
         self.step_outputs.clear()

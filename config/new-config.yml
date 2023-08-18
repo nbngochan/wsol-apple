@@ -6,7 +6,7 @@ task: detection
 architect_settings:
         name: wsol-test
         backbone:
-                name: ssd-s
+                name: fasterrcnn-s
                 is_full: false
                 is_pretrained: true
                 is_freeze: false
