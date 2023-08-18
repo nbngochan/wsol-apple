@@ -4,14 +4,19 @@ import torch.nn.functional as F
 from Detector import WrappingDetector
 from ultis import *
 from pytorch_lightning import LightningModule
+<<<<<<< HEAD
 from Dataloader import DataModule
 from neptune.types import File
+=======
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
+>>>>>>> 67f00d1755434582e30a3ffdc0a91b563ba55a1c
 
 
 seed_everything(44)
 # torch.backends.cudnn.benchmark = True # keep True if all the input have same size.
 torch.set_float32_matmul_precision('medium')
 
+<<<<<<< HEAD
 
 class DummyModel(nn.Module):
     def __init__(self):
@@ -21,6 +26,10 @@ class DummyModel(nn.Module):
         pass
 
 class ModelBase(LightningModule):
+=======
+    
+class Model(LightningModule):
+>>>>>>> 67f00d1755434582e30a3ffdc0a91b563ba55a1c
     def __init__(self, PARAMS):
         super().__init__()
         self.save_hyperparameters()

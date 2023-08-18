@@ -4,8 +4,12 @@ import random
 import numpy as np
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
+<<<<<<< HEAD
 from torchmetrics.classification import Accuracy, Dice
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
+=======
+
+>>>>>>> 67f00d1755434582e30a3ffdc0a91b563ba55a1c
 
 def seed_everything(SEED=42):
     random.seed(SEED)
@@ -44,6 +48,7 @@ def get_lr_scheduler_config(optimizer, settings):
             'frequency': 1,
         }
 
+<<<<<<< HEAD
 
 def get_metric(metric_name, num_classes):
     '''
@@ -64,6 +69,8 @@ def get_metric(metric_name, num_classes):
 
     return metric
 
+=======
+>>>>>>> 67f00d1755434582e30a3ffdc0a91b563ba55a1c
 def get_optimizer(parameters, settings):
     '''
     set up learning optimizer
