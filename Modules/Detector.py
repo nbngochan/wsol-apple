@@ -104,3 +104,4 @@ class WrappingDetector(nn.Module):
             output = self.base_model(images)
         
         return output
+    

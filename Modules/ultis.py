@@ -1,14 +1,11 @@
-from torch.utils.data import Dataset
-from torchvision import transforms
 import torch
-from torchvision.transforms._presets import ObjectDetection
-from functools import partial
+from torch import nn
 import random
 import numpy as np
-import os, glob
-import json
-import PIL.Image as Image
-
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
+from torchmetrics.classification import Accuracy, Dice
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 def seed_everything(SEED=42):
     random.seed(SEED)
@@ -17,195 +14,173 @@ def seed_everything(SEED=42):
     torch.cuda.manual_seed(SEED)
     torch.cuda.manual_seed_all(SEED)
    
+# For training
 
-def normalize_image(image):
-    xmin = np.min(image)
-    xmax = np.max(image)
-    return (image - xmin)/(xmax - xmin + 10e-6)
-
-def collate_fn(batch):
-    return tuple(zip(*batch))
-
-class Standardize(object):
-    """ Standardizes a 'PIL Image' such that each channel
-        gets zero mean and unit variance. """
-    def __call__(self, img):
-        return (img - img.mean(dim=(1,2), keepdim=True)) \
-            / torch.clamp(img.std(dim=(1,2), keepdim=True), min=1e-8)
-
-    def __repr__(self):
-        return self.__class__.__name__ + '()'
-
-class base_dataset(Dataset):
+def get_lr_scheduler_config(optimizer, settings):
     '''
-    mode: 'train', 'val', 'test'
-    data_path: path to data folder
-    imgsize: size of image
-    transform: transform function
+    set up learning rate scheduler
+    Args:
+        optimizer: optimizer
+        settings: settings hyperparameters
+    Returns:
+        lr_scheduler_config: [learning rate scheduler, configuration]
     '''
-    def __init__(self, mode, data_path, imgsize=224, transform=None):
-        self.data_path = data_path
-        self.mode = mode
-        self.transform = transform
-        self.img_list = None
-        self.label_list = None
+    if settings['lr_scheduler'] == 'step':
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=settings['lr_step'], gamma=settings['lr_decay'])
+    elif settings['lr_scheduler'] == 'multistep':
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer, milestones=settings['lr_step'], gamma=settings['lr_decay'])
+    elif settings['lr_scheduler'] == 'reduce_on_plateau':
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode='max', factor=0.1, patience=10, threshold=0.0001)
+    else:
+        raise NotImplementedError
 
-    def __len__(self):
-        return len(self.img_list)
+    return {
+            'scheduler': scheduler,
+            'monitor': f'metrics/batch/val_{settings["metric"]}',
+            'interval': 'epoch',
+            'frequency': 1,
+        }
+
+
+def get_metric(metric_name, num_classes):
+    '''
+    set up metric for evaluation
+    Args:
+        metric_name: name of metric
+    Returns:
+        metric: metric function
+    '''
+    if metric_name == 'acc':
+        metric = Accuracy(num_classes=num_classes)
+    elif metric_name == 'mAP':
+        metric = MeanAveragePrecision(num_classes=num_classes)
+    elif metric_name == 'dice':
+        metric = Dice(num_classes=num_classes)
+    else:
+        raise NotImplementedError()
+
+    return metric
+
+def get_optimizer(parameters, settings):
+    '''
+    set up learning optimizer
+    Args:
+        parameters: model's parameters
+        settings: settings hyperparameters
+    Returns:
+        optimizer: optimizer
+    '''
+    if settings['optimizer'] == 'adam':
+        optimizer = torch.optim.Adam(parameters, lr=settings['lr'], weight_decay=settings['weight_decay'])
+    elif settings['optimizer'] == 'sgd':
+        optimizer = torch.optim.SGD(
+            parameters, lr=settings['lr'], weight_decay=settings['weight_decay'], momentum=settings['momentum'])
+    else:
+        raise NotImplementedError()
+
+    return optimizer
+
+def get_loss_function(type):
+    '''
+    set up loss function
+    Args:
+        settings: settings hyperparameters,
+    Returns:
+        loss: loss function
+    '''
+    if type == "ce": 
+        loss = nn.CrossEntropyLoss()
+    elif type == "bce": 
+        loss = nn.BCELoss()
+    elif type == "mse": 
+        loss = nn.MSELoss()
+    elif type == "none": 
+        loss = None # only for task == detection
+    else: 
+        raise NotImplementedError()
+
+    return loss
+
+def get_gpu_settings(gpu_ids, n_gpu):
+    '''
+    Get gpu settings for pytorch-lightning trainer:
+    Args:
+        gpu_ids (list[int])
+        n_gpu (int)
+    Returns:
+        tuple[str, int, str]: accelerator, devices, strategy
+    '''
+    if not torch.cuda.is_available():
+        return "cpu", None, None
+
+    if gpu_ids is not None:
+        devices = gpu_ids
+        strategy = "ddp" if len(gpu_ids) > 1 else 'auto'
+    elif n_gpu is not None:
+        devices = n_gpu
+        strategy = "ddp" if n_gpu > 1 else 'auto'
+    else:
+        devices = 1
+        strategy = 'auto'
+
+    return "gpu", devices, strategy
+
+def get_basic_callbacks(settings):
+    '''
+    Get basic callbacks for pytorch-lightning trainer:
+    Args: 
+        settings
+    Returns:
+        last ckpt, best ckpt, lr callback, early stopping callback
+    '''
+    lr_callback = LearningRateMonitor(logging_interval='epoch')
+    last_ckpt_callback = ModelCheckpoint(
+        filename='last_model_{epoch:03d}',
+        auto_insert_metric_name=False,
+        save_top_k=1,
+        monitor=None,
+    )
+    best_ckpt_calllback = ModelCheckpoint(
+        filename='best_model_{epoch:03d}',
+        auto_insert_metric_name=False,
+        save_top_k=1,
+        monitor=f'metrics/epoch/val_{settings["metric"]}',
+        mode='max',
+        verbose=True
+    )
+    if settings['early_stopping']:
+        early_stopping_callback = EarlyStopping(
+            monitor=f'metrics/epoch/val_{settings["metric"]}',  # Metric to monitor for improvement
+            mode='max',  # Choose 'min' or 'max' depending on the metric (e.g., 'min' for loss, 'max' for accuracy)
+            patience=10,  # Number of epochs with no improvement before stopping
+        )
+        return [last_ckpt_callback, best_ckpt_calllback, lr_callback, early_stopping_callback]
+    else: 
+        return [last_ckpt_callback, best_ckpt_calllback, lr_callback]
     
-    def __getitem__(self, index):
-        '''
-        return tran_image, target, original image
-        '''
-        image = self.img_list[index]
-        label = self.label_list[index]
-        trans_img = self.transform(image)
-        return trans_img, label, image
-      
-       
-class PennFudanDataset(torch.utils.data.Dataset):
-    def __init__(self, mode, data_path, imgsize=224, transform=None):
-        self.root = data_path
-        self.transform = transform
-        # load all image files, sorting them to
-        # ensure that they are aligned
-        imgs = list(sorted(os.listdir(os.path.join(data_path, "PNGImages"))))
-        masks = list(sorted(os.listdir(os.path.join(data_path, "PedMasks"))))
+def get_trainer(settings, logger):
+    '''
+    Get trainer and logging for pytorch-lightning trainer:
+    Args: 
+        settings: hyperparameter settings
+        task: task to run training
+    Returns:
+        trainer: trainer object
+        logger: neptune logger object
+    '''
+    callbacks = get_basic_callbacks(settings)
+    accelerator, devices, strategy = get_gpu_settings(settings['gpu_ids'], settings['n_gpu'])
 
-        n = len(imgs)
-        if(mode == 'train'):
-            self.imgs = imgs[:int(n*0.8)]
-            self.masks = masks[:int(n*0.8)]
-        elif(mode == 'val'):
-            self.imgs = imgs[int(n*0.8):]
-            self.masks = masks[int(n*0.8):]
-        elif(mode == 'test'):
-            self.imgs = imgs[int(n*0.8):]
-            self.masks = masks[int(n*0.8):]
-
-        if(self.transform is None):
-            self.transform = partial(ObjectDetection)()
-    
-    def __len__(self):
-        return len(self.imgs)
-
-    def __getitem__(self, idx):
-        # load images and masks
-        img_path = os.path.join(self.root, "PNGImages", self.imgs[idx])
-        mask_path = os.path.join(self.root, "PedMasks", self.masks[idx])
-        img = Image.open(img_path).convert("RGB")
-        # note that we haven't converted the mask to RGB,
-        # because each color corresponds to a different instance
-        # with 0 being background
-        mask = Image.open(mask_path)
-        # convert the PIL Image into a numpy array
-        mask = np.array(mask)
-        # instances are encoded as different colors
-        obj_ids = np.unique(mask)
-        # first id is the background, so remove it
-        obj_ids = obj_ids[1:]
-
-        # split the color-encoded mask into a set
-        # of binary masks
-        masks = mask == obj_ids[:, None, None]
-
-        # get bounding box coordinates for each mask
-        num_objs = len(obj_ids)
-        boxes = []
-        for i in range(num_objs):
-            pos = np.nonzero(masks[i])
-            xmin = np.min(pos[1])
-            xmax = np.max(pos[1])
-            ymin = np.min(pos[0])
-            ymax = np.max(pos[0])
-            boxes.append([xmin, ymin, xmax, ymax])
-
-        # convert everything into a torch.Tensor
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        # there is only one class
-        labels = torch.ones((num_objs,), dtype=torch.int64)
-        masks = torch.as_tensor(masks, dtype=torch.uint8)
-
-        image_id = torch.tensor([idx])
-        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
-        # suppose all instances are not crowd
-        iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
-
-        target = {}
-        target["boxes"] = boxes
-        target["labels"] = labels
-        target["masks"] = masks
-        target["image_id"] = image_id
-        target["area"] = area
-        target["iscrowd"] = iscrowd
-
-        trans_img = self.transform(img)
-
-        return trans_img, target, transforms.ToTensor()(img)
-       
-class AppleRead(Dataset):
-    def __init__(self, mode, data_path, imgsize=224, transform=None):
-        self.data_path = data_path
-        self.mode = mode
-        self.transform = transform
-        # read json file
-        with open(os.path.join(data_path, 'inference_modified_2106355.json'), 'r') as f:
-            json_data = json.load(f)
-
-        # remove images with class 1
-        json_data = [x for x in json_data if x['class'] != 1]
-
-        n = len(json_data)
-        if(mode == 'train'):
-            self.dataset = json_data[:int(n*0.8)]
-        elif(mode == 'val'):
-            self.dataset = json_data[int(n*0.8):]
-        elif(mode == 'test'):
-            self.dataset = json_data[int(n*0.8):]
-
-        if(self.transform is None):
-            self.transform = partial(ObjectDetection)()
-
-    def __len__(self):
-        return len(self.dataset)
-    
-    def __getitem__(self, index):
-
-        img_path = os.path.join(self.data_path, 'images', self.dataset[index]['name'])
-        img = Image.open(img_path).convert("RGB")
-
-        # process labels
-        temp_boxes = self.dataset[index]['crop_coordinates_ratio']
-        num_objs = len(temp_boxes)
-        boxes = []
-        # convert from [x_center, y_center, width, height] to [xmin, ymin, xmax, ymax]
-        # and convert from ratio to absolute value
-        for box in temp_boxes:
-            x_center, y_center, width, height = box
-            xmin = int((x_center - width/2) * img.size[0])
-            xmax = int((x_center + width/2) * img.size[0])
-            ymin = int((y_center - height/2) * img.size[1])
-            ymax = int((y_center + height/2) * img.size[1])
-            boxes.append([xmin, ymin, xmax, ymax])
-
-        # convert everything into a torch.Tensor
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        # there is only one class
-        labels = torch.ones((num_objs,), dtype=torch.int64) # all labels are 1
-        image_id = torch.tensor([index])
-        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
-        # suppose all instances are not crowd
-        iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
-
-        target = {}
-        target["boxes"] = boxes
-        target["labels"] = labels
-        # target["masks"] = masks
-        target["image_id"] = image_id
-        target["area"] = area
-        target["iscrowd"] = iscrowd
-
-        trans_img = self.transform(img)
-
-        return trans_img, target, transforms.ToTensor()(img)
-
+    trainer = Trainer(
+        logger=[logger],
+        max_epochs=settings['n_epoch'],
+        default_root_dir=settings['ckpt_path'],
+        accelerator=accelerator,
+        devices=devices,
+        strategy=strategy,
+        callbacks=callbacks,
+    )
+    return trainer
