@@ -381,8 +381,7 @@ def get_basic_callbacks() -> list:
 
 
 def get_gpu_settings(
-        gpu_ids: list[int], n_gpu: int
-) -> tuple[str, int | list[int] | None, str | None]:
+        gpu_ids: list[int], n_gpu: int) -> tuple[str, int | list[int] | None, str | None]:
     """Get gpu settings for pytorch-lightning trainer:
     https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html#trainer-flags
 

@@ -8,7 +8,7 @@ import json
 import torch
 import os
 from pytorch_grad_cam import GradCAM
-from train import SimpleModel
+from train_classifier import SimpleModel
 import pickle
 import time
 import pandas as pd

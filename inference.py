@@ -2,7 +2,7 @@ import torch
 import cv2
 import os
 import torchvision.transforms as transforms
-from train import SimpleModel
+from train_classifier import SimpleModel
 from PIL import Image
 import numpy as np
 from torch.nn import functional as F
