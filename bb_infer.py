@@ -1,7 +1,7 @@
 import cv2
 import json
 
-CROPPED_PATH_BB = 'D:/mnt/data_source/cropped-apple-bb/crop-images-bb/'
+CROPPED_PATH_BB = '/root/data/apple/cropped-apple-bb/crop-images-bb/'
 MODIFILED_JSON_210623 = 'D:/lab/dataset/HelloAppleWorld/Yolo-type/classification/inference_modified_210623.json'
 MODIFILED_JSON_2106355 = 'D:/lab/dataset/HelloAppleWorld/Yolo-type/classification/inference_modified_2106355.json'
 

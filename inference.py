@@ -2,7 +2,7 @@ import torch
 import cv2
 import os
 import torchvision.transforms as transforms
-from train import SimpleModel
+from train_classifier import SimpleModel
 from PIL import Image
 import numpy as np
 from torch.nn import functional as F
@@ -17,8 +17,8 @@ import pickle
 # CHECKPOINT_PATH = 'D:/lab/project/weakly-segmentation/classification/pytorch-image-classification/results/tb_logs/lightning_logs/version_45/checkpoints/best_model_012-0.1648-0.94.ckpt'
 # OUTPUT_DIR = 'D:/lab/dataset/HelloAppleWorld/Yolo-type/classification/2206/scale0.25/'
 # JSON_FILE = 'D:/lab/dataset/HelloAppleWorld/Yolo-type/classification/inference_modified_2106355.json'
-JSON_FILE = '/root/data/wsol/pytorch-image-classification/ground-truth-bbox/inference_modified.json'
-OUTPUT_DIR = '/root/data/apple/cropped-apple-bb/HR-1024/'
+JSON_FILE = './ground-truth-bbox/inference_modified.json'
+OUTPUT_DIR = '/root/data/apple/cropped-apple-bb/image/'
 CHECKPOINT_PATH = './results/tb_logs/lightning_logs/version_50/checkpoints/best_model_012-0.1877-0.94.ckpt'
 
 

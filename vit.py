@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch import nn
 import warnings
-from train import SimpleModel
+from train_classifier import SimpleModel
 warnings.filterwarnings("ignore")
 import time
 

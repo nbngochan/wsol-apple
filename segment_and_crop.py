@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 import json
 
-IMAGE_PATH = 'D:/lab/dataset/HelloAppleWorld/Yolo-type/images/'
-DEST_PATH = 'D:/mnt/data_source/cropped-apple-bb/images/'
+IMAGE_PATH = '/root/data/apple/original/images/'
+DEST_PATH = '/root/data/apple/cropped-apple-bb/crop-images-bb/'
 
 def segment_crop(img_path):
     """
@@ -68,8 +68,8 @@ def segment_crop(img_path):
     return result, x_min / img_width, y_min / img_height, img_width / crop_size[0], img_height / crop_size[1]
 
 if __name__ == '__main__':
-    JSON_FILE = 'D:/lab/dataset/HelloAppleWorld/Yolo-type/classification/inference_modified.json'
-    OUTPUT_JSON_FILE = 'D:/lab/dataset/HelloAppleWorld/Yolo-type/classification/inference_modified_210623.json'
+    JSON_FILE = './ground-truth-bbox/inference_modified.json'
+    OUTPUT_JSON_FILE = './ground-truth-bbox/inference_modified_210623.json'
     data = []
     img_path = [os.path.join(IMAGE_PATH, item) for item in os.listdir(IMAGE_PATH)]
 
