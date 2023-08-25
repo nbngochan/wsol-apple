@@ -1,11 +1,11 @@
 # wsol-apple
-This project explores weakly supervised object localization techniques on a class-label dataset of apple images. 
+>This project explores weakly supervised object localization techniques on a class-label dataset of apple images. 
 
 **Table of Contents**
 - **About**
 - **Getting Started**
 - **Usage**
-
+- **Localization Visualization**
 
 ## **About**
 This work utilizes a convolutional neural network (CNN) pretrained on image-level labels to generate class activation maps in a multi-scale manner to highlight discriminative regions. Additionally, a vision transformer (ViT) pretrained was treated to produce multi-head attention maps as an auxiliary detector. By integrating the CNN based CAMs and attention maps, our approach localizes defective regions without requiring bounding box or pixel-level supervision during training.
@@ -14,7 +14,7 @@ This work utilizes a convolutional neural network (CNN) pretrained on image-leve
 
 
 ## **Getting Started**
-All the dependencies and required libraries are included in the *requirements.text* file
+All the dependencies and required libraries are included in the *requirements.txt* file
 
 **Prequisite**
 - Python=3.10
@@ -72,15 +72,19 @@ Links to download the datasets are provided in *assets/data_sda.txt.*
 
 
 ### **Weakly Supvervised Defects Localization**
+**PIPEPLINE**
+
+TODO
 
 **_Object Classification Module_**
-Implements the following algorithms for image classification using the Pytorch framwork:
+Implements image classification for a SDA dataset based on [PyTorch Lightning]() framework and [timm](). The model used for classifier training:
 - ResNet50
 - EfficientNet-v2
 - GoogLeNet-v4
 
 **1. Data Preparation**
 Organize the original data to be structured as:
+
 ```
 dataset/
   - train/
@@ -107,18 +111,63 @@ Below is an example of what the CSV file looks like:
 ```
 name,label,state,file_path,file_raw_path
 8501,1,defective,mnt/dataset/defective-fruit/test/test_segmented/8501_segmented.jpg,mnt/dataset/defective-fruit/test/test/8501.jpg
-2878,0,normal,mnt/dataset/defective-fruit/test/test_segmented/8502_segmented.jpg,mnt/dataset/defective-fruit/test/test/2878.jpg 
+2878,0,normal,mnt/dataset/defective-fruit/test/test_segmented/2878_segmented.jpg,mnt/dataset/defective-fruit/test/test/2878.jpg 
 ```
 
 **2. Training classification**
+```
+python train.py --csv-train /root/data/apple/cropped-apple-bb/defective-fruit/train.csv --csv-val /root/data/apple/cropped-apple-bb/defective-fruit/test.csv
+```
+You can use the most of models in [timm](https://huggingface.co/docs/timm/index) by specifying `--mode-name` directly
+```
+usage: train.py [-h] --dataset DATASET [--outdir OUTDIR]
+                [--model-name MODEL_NAME] [--img-size IMG_SIZE]
+                [--epochs EPOCHS] [--save-interval SAVE_INTERVAL]
+                [--batch-size BATCH_SIZE] [--num-workers NUM_WORKERS]
+                [--gpu-ids GPU_IDS [GPU_IDS ...] | --n-gpu N_GPU]
+                [--seed SEED]
+
+Train classifier.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --dataset DATASET, -d DATASET
+                        Root directory of dataset
+  --outdir OUTDIR, -o OUTDIR
+                        Output directory
+  --model-name MODEL_NAME, -m MODEL_NAME
+                        Model name (timm)
+  --img-size IMG_SIZE, -i IMG_SIZE
+                        Input size of image
+  --epochs EPOCHS, -e EPOCHS
+                        Number of training epochs
+  --save-interval SAVE_INTERVAL, -s SAVE_INTERVAL
+                        Save interval (epoch)
+  --batch-size BATCH_SIZE, -b BATCH_SIZE
+                        Batch size
+  --num-workers NUM_WORKERS, -w NUM_WORKERS
+                        Number of workers
+  --gpu-ids GPU_IDS [GPU_IDS ...]
+                        GPU IDs to use
+  --n-gpu N_GPU         Number of GPUs
+  --seed SEED           Seed
+```
+
+**Tensorboard Logging**
+```
+tensorboard --logdir ./results
+```
 
 
 **_Defects Localization Module_**
-- fd
-- gf
-- fgah
+
+**1. Data Preprocessing**
+This part using another type of dataset: instance-label so we need to perform 
+
+**2. Localization phrase**
 
 
+## **Localization Visualization**
 
 
 
