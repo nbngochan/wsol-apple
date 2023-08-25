@@ -8,3 +8,7 @@ pillow
 scipy
 opencv-python
 matplotlib
+pytorch_grad_cam
+cuda_slic
+skimage
+selective_search

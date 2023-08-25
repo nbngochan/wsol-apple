@@ -17,6 +17,7 @@ import warnings
 from train_classifier import SimpleModel
 warnings.filterwarnings("ignore")
 import time
+import argparse
 
 
 def trunc_normal_(tensor, mean=0., std=1., a=-2., b=2.):
@@ -492,26 +493,35 @@ class Loader(object):
                 content = self.uploader.value[uploaded_filename]['content']
                 output_file.write(content)
                 
-if __name__ == '__main__':
+def main ():
+    parser = argparse.ArgumentParser(description="VitGenerator Script")
+    parser.add_argument("--checkpoint", required=False, help="Path to the checkpoint file")
+    parser.add_argument("--model", default="vit_small", help="Name of the model")
+    parser.add_argument("--patch_size", type=int, default=8, help="Patch size")
+    parser.add_argument("--image_path", required=True, help="Path to the image")
+    parser.add_argument("--factor_reduce", type=int, default=2, help="Factor to reduce image size")
+    parser.add_argument("--evaluate", action="store_true", help="Evaluate the model")
+    parser.add_argument("--random", action="store_true", help="Random argument")
+    parser.add_argument("--verbose", action="store_true", help="Verbose argument")
+
+    args = parser.parse_args()
+
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    
-    checkpoint_path = '/root/data/wsol/pytorch-image-classification/results/tb_logs/lightning_logs/version_51/checkpoints/best_model_020-0.6305-0.67.ckpt'
-    
-    name_model = 'vit_small'
-    patch_size = 8
-    
-    model = VitGenerator(name_model, patch_size, 
-                        device, checkpoint_path=None, evaluate=True, random=False, verbose=True)
+
+    model = VitGenerator(args.model, args.patch_size, device, args.checkpoint, args.evaluate, args.random, args.verbose)
     print(model)
 
-    # Visualizing image, test with individual image
-    image_paths = os.listdir('./content/')
-    path = './content/23945063_20211104_152709_751.jpg'
-    img = Image.open(path)
-    factor_reduce = 2
-    img_size = tuple(np.array(img.size[::-1]) // factor_reduce) 
+    img = Image.open(args.image_path)
+    img_size = tuple(np.array(img.size[::-1]) // args.factor_reduce)
     start_time = time.time()
-    visualize_predict(model, img, img_size, patch_size, device)
+    visualize_predict(model, img, img_size, args.patch_size, device)
     end_time = time.time()
     print(f'Elapsed time: {end_time - start_time}')
+
+if __name__ == '__main__':
+    main()
+
+# Example of using this script
+# python vit.py --image_path ./content/23945063_20211104_152709_751.jpg --random
+
     

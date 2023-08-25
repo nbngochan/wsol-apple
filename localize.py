@@ -20,6 +20,7 @@ from skimage.segmentation import watershed
 from cuda_slic.slic import slic as slic
 from skimage.measure import regionprops
 import selective_search
+import argparse
 
 
 def im2double(img):
@@ -576,37 +577,52 @@ class CombineCam:
         return overall_iou, ious_dict
     
     
-def proposed_approach():
-    # Initialize the class 
-    threshold = 0.5
-    localizer = CombineCam(threshold=threshold, 
-                           checkpoint_path='./results/tb_logs/lightning_logs/version_45/checkpoints/best_model_012-0.1648-0.94.ckpt',
-                           json_file='./ground-truth-bbox/inference_modified_original.json')
-    
-    # List of available options
-    options = {1: None,  # scale at the MR image size (512)
-               2: 'scale0.25',
-               3: 'scale1',
-               4: 'scale0.25_0.5',
-               5: 'attention',
-               6: 'multiscale',
-               7: 'multi_attention',
-               8: 'multi_slic',
-               9: 'multi_watershed',
-               10: 'multi_selectivesearch'}
-    
+def proposed_approach(threshold, checkpoint_path, json_file, image_dir, result_dict, file_path, coord, option, img_name):
+    # Initialize the class
+    localizer = CombineCam(threshold=threshold, checkpoint_path=checkpoint_path, json_file=json_file)
+
+    # Get the description for the chosen option
+    option_description = OPTION_DESCRIPTIONS.get(option, None)
+
     # Evaluate the proposed approach by using different options with IoU score
-    avg_iou, _ = localizer.evaluate_all(image_dir='/root/data/apple/cropped-apple-bb/images/',
-                                        result_dict='./multiscale-dict/with-vit/multiscale_vit_version2.pickle',
-                                        file_path='cropped_image_path',
-                                        coord='crop_coordinates_ratio',
-                                        option=options[7],
-                                        img_name=None)
-    
+    avg_iou, _ = localizer.evaluate_all(image_dir=image_dir, result_dict=result_dict, file_path=file_path,
+                                        coord=coord, option=option_description, img_name=img_name)
+
     print(avg_iou)
     print(f'Average IoU score: {avg_iou:.4f}')
 
+
 if __name__ == '__main__':
-    proposed_approach()
+    # Dictionary to map option choices to descriptions
+    OPTIONS = {
+        1: None,  # scale at the MR image size (512)
+        2: 'scale0.25',
+        3: 'scale1',
+        4: 'scale0.25_0.5',
+        5: 'attention',
+        6: 'multiscale',
+        7: 'multi_attention',
+        8: 'multi_slic',
+        9: 'multi_watershed',
+        10: 'multi_selectivesearch'
+    }
     
+    parser = argparse.ArgumentParser(description="Proposed Approach")
+    parser.add_argument("--threshold", type=float, default=0.5, help="Threshold")
+    parser.add_argument("--checkpoint-path", required=True, default='./results/tb_logs/lightning_logs/version_45/checkpoints/best_model_012-0.1648-0.94.ckpt', help="Checkpoint path")
+    parser.add_argument("--json-file", required=True, default='./ground-truth-bbox/inference_modified_original.json', help="JSON file")
+    parser.add_argument("--image-dir", required=True, default='/root/data/apple/cropped-apple-bb/images/', help="Image directory")
+    parser.add_argument("--result-dict", required=True, default='./multiscale-dict/with-vit/multiscale_vit_version2.pickle', help="Result dictionary")
+    parser.add_argument("--file-path", required=True, default='cropped_image_path', help="File path")
+    parser.add_argument("--coord", required=True, default='crop_coordinates_ratio', help="Coordinates")
+    parser.add_argument("--option", type=int, default=7, choices=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], help="Option")
+    parser.add_argument("--img-name", help="Image name")
+
+    args = parser.parse_args()
+
+    proposed_approach(args.threshold, args.checkpoint_path, args.json_file, args.image_dir, args.result_dict,
+                      args.file_path, args.coord, args.option, args.img_name)
     
+
+# Example of using:
+# python proposed_approach_script.py --threshold THRESHOLD --option OPTIONS[INT]

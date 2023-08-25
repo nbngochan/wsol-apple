@@ -68,16 +68,16 @@ Links to download the datasets are provided in *assets/data_sda.txt.*
 
 
 ## **Usage**
-### [**Object Detection Model**](https://github.com/Ka0Ri/Pytorch-pretrained-models)
+### [**(1) Object Detection Model**](https://github.com/Ka0Ri/Pytorch-pretrained-models)
 
 
-### **Weakly Supvervised Defects Localization**
+### **(2) Weakly Supvervised Defects Localization**
 **PIPEPLINE**
 
 TODO
 
 **_Object Classification Module_**
-Implements image classification for a SDA dataset based on [PyTorch Lightning]() framework and [timm](). The model used for classifier training:
+Implements image classification for a SDA dataset based on [PyTorch Lightning](https://lightning.ai/) framework and [timm](https://huggingface.co/docs/timm/index). The model used for classifier training:
 - ResNet50
 - EfficientNet-v2
 - GoogLeNet-v4
@@ -100,7 +100,7 @@ dataset/
       ...
     - test.csv
 ```
-The dataset contains CSV files for the training and test sets - <span style='color: red;'>train.csv</span> and <span style='color: red;'>test.csv</span>. These CSV files contain the following columns:
+The dataset contains CSV files for the training and test sets - `train.csv` and `test.csv`. These CSV files contain the following columns:
 - name - The image file name
 - label - The class label (0 for normal, 1 for defective)
 - state - The class name (normal or defective)
@@ -153,21 +153,88 @@ optional arguments:
   --seed SEED           Seed
 ```
 
-**Tensorboard Logging**
+*Tensorboard Logging*
 ```
 tensorboard --logdir ./results
 ```
+
+*Inference a folder of image*
+```
+python inference.py
+```
+
 
 
 **_Defects Localization Module_**
 
 **1. Data Preprocessing**
-This part using another type of dataset: instance-label so we need to perform 
 
-**2. Localization phrase**
+The dataset used in this section is in instance-label format - raw images with bounding box coordinates for each object. To prepare this dataset, segmentation and cropping is applied to extract object instances. The bounding boxes are transformed to match the cropped image dimensions.
 
+Pre-processing starts from the YOLO bounding box dataset. The final output is a standard dataset of cropped instances ready for model usage, saved in [inference_modified_original.json](/ground-truth-bbox/inference_modified_original.json).
 
+```
+python segment_and_crop.py
+python bb_infer.py
+```
+
+**2. Generating saliency map for each single image**
+
+To obtain the attention map, ViT backbone was used as a visual saliency map.
+```
+python vit.py --image_path ./content/23945063_20211104_152709_751.jpg --evaluate --verbose
+```
+Use can defined the selection of ViT model by specifying `--model` name
+
+```
+usage: vit.py   [--help] [--checkpoint CHECKPOINT]
+                [--model MODEL_NAME] [--patch_size PATCH_SIZE]
+                [--image_path IMAGE_PATH] [--factor_reduce FACTOR_REDUCE]
+                [--evaluate] [--random] [--verbose]
+
+Generating attention map
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --checkpoint CHECKPOINT
+                        Path to the checkpoint file
+  --model MODEL_NAME
+                        Name of the model
+  --image_path IMAGE_PATH
+                        Path to the image
+  --factor_reduce FACTOR_REDUCE
+                        Factor to reduce image size
+  --evaluate
+                        Set model in evaluation mode (no gradient backward)
+  --random
+                        Random argument
+  --verbose
+                        Verbose argument
+```
+
+**3. Localization phrase with refinement**
+This option provides multiple choices of refinement methods to improve the Class Activation Map localization results. The options are configurable in a dictionary:
+```
+OPTIONS = {
+    1: None,                     # CAM at the original MR image size (512)
+    2: 'scale0.25',              # Obtain CAM from 0.25x image size.
+    3: 'scale1',                 # Obtain CAM from original image size.
+    4: 'scale0.25_0.5',          # Obtain CAM from 0.25x, 0.5x image sizes.
+    5: 'attention',              # Use only attention refinement.
+    6: 'multiscale',             # Use multi-scale refinement.
+    7: 'multi_attention',        # Use multi-scale attention refinement.
+    8: 'multi_slic',             # Refine with SLIC superpixels at multiple scales.
+    9: 'multi_watershed',        # Refine with watershed at multiple scales.
+    10: 'multi_selectivesearch'  # Use selective search refinement.
+    }
+```
+You can specify the `--threshold` to get varying pseudo masks that localized defects. Example of the python script.
+```
+python proposed_approach_script.py --threshold THRESHOLD --option OPTION_DESCRIPTIONS[INT]
+```
 ## **Localization Visualization**
+Referring to the previously presented experimental outcomes, integrating various multi-scale techniques, and selecting thresholds resulted in highest corresponding mIoU achievements for each method.
+![Qualitative comparisons on Surface defective apple dataset](/assets/images/Picture15.png)
 
 
 
