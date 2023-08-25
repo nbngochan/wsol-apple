@@ -130,7 +130,7 @@ usage: train.py [-h] --dataset DATASET [--outdir OUTDIR]
 Train classifier.
 
 optional arguments:
-  -h, --help            show this help message and exit
+  -h, --help            Show this help message and exit
   --dataset DATASET, -d DATASET
                         Root directory of dataset
   --outdir OUTDIR, -o OUTDIR
@@ -195,21 +195,21 @@ usage: vit.py   [--help] [--checkpoint CHECKPOINT]
 Generating attention map
 
 optional arguments:
-  -h, --help            show this help message and exit
+  -h, --help            Show this help message and exit
   --checkpoint CHECKPOINT
-                        Path to the checkpoint file
+                        Path to checkpoint file
   --model MODEL_NAME
                         Name of the model
   --image_path IMAGE_PATH
-                        Path to the image
+                        Path to image file
   --factor_reduce FACTOR_REDUCE
-                        Factor to reduce image size
+                        Factor to reduce image size (default: 2)
   --evaluate
-                        Set model in evaluation mode (no gradient backward)
+                        Model in evaluation mode (no gradient)
   --random
                         Random argument
   --verbose
-                        Verbose argument
+                        Print additional info
 ```
 
 **3. Localization phrase with refinement**
@@ -228,10 +228,40 @@ OPTIONS = {
     10: 'multi_selectivesearch'  # Use selective search refinement.
     }
 ```
-You can specify the `--threshold` to get varying pseudo masks that localized defects. Example of the python script.
+You can specify the `--threshold` to get varying pseudo masks that localized defects. The usage of function is as follow:
 ```
-python proposed_approach_script.py --threshold THRESHOLD --option OPTION_DESCRIPTIONS[INT]
+usage: localize.py  [--help] [--threshold THRESHOLD]
+                    [--checkpoint-path CHECKPOINT_PATH] [--json-file JSON_FILE]
+                    [--image-dir IMAGE_DIR] [--result-dict RESULT_DICT]
+                    [--file-path FILE_PATH] [--coord COORD] 
+                    [--option OPTION] [--img-name IMG_NAME]
+
+Defects localizing with multiple choices of refinement method 
+
+optional arguments:
+  -h, --help            Show this help message and exit
+  --threshold THRESHOLD
+                        Threshold (default: 0.5)
+  --checkpoint-path CHECKPOINT_PATH
+                        Path to the checkpoint file
+  --json-file JSON_FILE
+                        Path to the JSON file
+  --image-dir IMAGE_DIR
+                        Directory containing images
+  --result-dict RESULT_DICT
+                        Path to result dictionary
+  --file-path FILE_PATH
+                        Key in JSON for image file path 
+  --coord COORD         Key in JSON for bounding box coordinates (default: 'crop_coordinates_ratio')  
+  --option OPTION       Refinement option (choices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], default: 7)
+  --img-name IMG_NAME   Name of image to run on
 ```
+
+Example of the python script.
+```
+python localize.py --threshold THRESHOLD --option OPTION_DESCRIPTIONS[INT]
+```
+
 ## **Localization Visualization**
 Referring to the previously presented experimental outcomes, integrating various multi-scale techniques, and selecting thresholds resulted in highest corresponding mIoU achievements for each method.
 ![Qualitative comparisons on Surface defective apple dataset](/assets/images/Picture15.png)
