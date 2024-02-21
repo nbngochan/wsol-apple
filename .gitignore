@@ -168,5 +168,4 @@ models/
 
 code
 test.ipynb
-runs/
 *.pt
