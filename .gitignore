@@ -162,8 +162,11 @@ cython_debug/
 .neptune/
 .vscode/
 data/
+datasets/
 models/
 # examples/
 
 code
 test.ipynb
+runs/
+*.pt
